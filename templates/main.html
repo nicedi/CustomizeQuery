@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>人保财险新疆分公司营业部 非车险数据查询系统</title>
+    <script src="static/jquery.min.js"></script>
+    <script type="text/javascript" src="static/w2ui.js"></script>
+    <script type="text/javascript" src="static/download.js"></script>
+    <link rel="stylesheet" type="text/css" href="static/w2ui.css" />
+    <!-- <link rel="shortcut icon" href="/static/sitelogo.png"/> -->
+</head>
+<body>
+
+<div id="toolbar" style="padding: 4px; border: 1px solid #dfdfdf; border-radius: 3px"></div>
+<div style="padding:4px;font-size:0.8em"><span id="navigation" style="float:left"></span><span style="float:right;width:250px;text-align:right">当前用户:{{ session.username.decode('utf-8') }} <a href="/logout">退出系统</a></span></div>
+<div id="main" style="width: 100%; height: 600px;"></div>
+
+<script type="text/javascript">
+$(document).ready(function() {
+    $.ajax({
+        url:'/gen_toolbar',
+        type:'get',
+        datatype:'json',
+        success:function(data) {
+            //console.log(data);
+            $('#toolbar').w2toolbar(JSON.parse(data));
+            w2ui.toolbar.on('click', function(event) {
+                $('#navigation').text(event.target.replace(':', ' > '));
+                $.ajax({
+            			url:'/setup_grid',
+            			type:'POST',
+            			data:{menu_item : event.target.replace(':', '>')},
+            			dataType:'json',
+            			success:function(data){
+                    // console.log(data);
+                    if (data != null) {
+                      if (data.uitype === 'grid') {
+                        $('#main').w2grid(data);
+                        w2ui.grid.on('save', function(event){
+                            event.preventDefault();
+                            if (confirm('将当前查询结果导出为Excel表格？')) {
+                              w2popup.open({
+                                title: '',
+                                body: '<div class="w2ui-centered"><h3>正在构造表格...</h3><h4>如果查询复杂或数据量大，将需要较长时间，请耐心等候。</h4></div>'
+                              });
+                              $.ajax({
+                                url:'/export_data',
+                                type:'GET',
+                                datatype:'text',
+                                success:function(data) {
+                                  w2popup.close();
+                                  // debugger;
+                                  result = JSON.parse(data)
+                                  if (result.status === 'success') {
+                                    //   window.open(result.xlsname, "_blank");
+                                      downloadFile(result.xlsname);
+                                  } else if (result.status === 'error') {
+                                      alert(result.message);
+                                  }
+                                },
+                                complete:function() {
+                                //   $.ajax({
+                                //     url:'/delete_xls',
+                                //     type:'GET',
+                                //     success:function() {
+                                  //
+                                //     }
+                                //   });
+                                }
+                              });
+                            }
+                        })
+                      }
+                      else if (data.uitype === 'layout') {
+                        $('#main').w2layout(data.layout);
+                        w2ui.layout.content('left', $().w2grid(data.grid));
+                        w2ui.layout.content('main', $().w2form(data.form));
+                        w2ui[data.grid.name].onClick = function(event) {
+                                    var grid = this;
+                                    var form = w2ui.form;
+                                    // console.log(event);
+                                    event.onComplete = function () {
+                                        var sel = grid.getSelection();
+                                        // console.log(sel);
+                                        if (sel.length == 1) {
+                                            form.recid  = sel[0];
+                                            form.record = $.extend(true, {}, grid.get(sel[0]));
+                                            form.refresh();
+                                        } else {
+                                            form.clear();
+                                        }
+                                    }
+
+                        };
+                        w2ui[data.form.name].actions.Reset = function () {
+                                      this.clear();
+                                  };
+                        w2ui[data.form.name].actions.Save = function () {
+                                      var errors = this.validate();
+                                      if (errors.length > 0) return;
+                                      if (this.recid == 0) {
+                                        //   w2ui.grid.add($.extend(true, { recid: w2ui.grid.records.length + 1 }, this.record));
+                                        //   w2ui.grid.selectNone();
+                                          w2ui[data.form.name].save();
+                                        //   w2ui.grid.reload();
+                                        //   this.clear();
+                                      } else {
+                                        //   w2ui.grid.set(this.recid, this.record);
+                                        //   w2ui.grid.selectNone();
+                                          w2ui[data.form.name].save();
+                                        //   this.clear();
+                                      }
+
+                                  };
+                          w2ui[data.form.name].on('save', function(event) {
+                            //   console.log(event);
+                              w2ui.grid.reload();
+                          });
+                      }
+                      else if (data.uitype === 'popup') {
+                        //   console.log(data.grid);
+                        //   debugger;
+                          w2popup.open(data);
+                      }
+            			 }
+            		}
+              })
+            });
+        }
+    });
+});
+</script>
+
+</body>
+</html>
