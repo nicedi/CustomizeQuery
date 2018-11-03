@@ -1,5 +1,5 @@
 # -*- coding=utf-8 -*-
-import os, re, pyodbc, datetime, decimal, shutil, sqlite3
+import os, re, pyodbc, datetime, decimal, cdecimal, shutil, sqlite3
 from flask import Flask, request, session, g, redirect, url_for, \
      abort, render_template, flash, json
 from contextlib import closing
@@ -139,7 +139,7 @@ def setup_grid():
     menu_item = request.form['menu_item']
     try:
         lev1menu, lev2menu = menu_item.split('>')
-    except Exception as e:
+    except Exception, e:
         return json.dumps(grid)
     # import pdb; pdb.set_trace()
     if lev1menu == u'后台管理' and lev2menu == u'SQL语句管理':
@@ -168,7 +168,7 @@ def setup_grid():
                 'columns':columns,
                 'searches':searches
             }
-        except Exception as e:
+        except Exception, e:
             pass
     return json.dumps(grid)
 
@@ -507,7 +507,7 @@ def manage_user():
             try:
                 cur.execute(sql, [usercode, username, comcode, comname, riskcode, exportdata, validstatus, req['record']['recid']])
                 obj = {'status':'success'}
-            except Exception as e:
+            except Exception, e:
                 obj = {'status':'error', 'message':'update error '+str(e)}
         else:
             # import pdb; pdb.set_trace();
@@ -517,7 +517,7 @@ def manage_user():
                 # cur.execute(sql, [usercode, username, comcode, comname, pyodbc.Binary(password), riskcode, exportdata, validstatus, req['record']['recid']])
                 cur.execute(sql, [usercode, username, comcode, comname, password, riskcode, exportdata, validstatus, req['record']['recid']])
                 obj = {'status':'success'}
-            except Exception as e:
+            except Exception, e:
                 obj = {'status':'error', 'message':'update error '+str(e)}
     return json.dumps(obj)
 
@@ -551,7 +551,7 @@ def manage_singleuser():
         try:
             cur.execute(sql, [username, comname, req['record']['recid']])
             obj = {'status':'success'}
-        except Exception as e:
+        except Exception, e:
             obj = {'status':'error', 'message':'update error '+str(e)}
     elif oldpsw == '':
         obj = {'status':'error', 'message':u'请填写原密码'}
@@ -568,7 +568,7 @@ def manage_singleuser():
                 # cur.execute(sql, [username, comname, pyodbc.Binary(password), req['record']['recid']])
                 cur.execute(sql, [username, comname, password, req['record']['recid']])
                 obj = {'status':'success'}
-            except Exception as e:
+            except Exception, e:
                 obj = {'status':'error', 'message':'update error '+str(e)}
         else:
             obj = {'status':'error', 'message':u'原密码不正确'}
@@ -637,7 +637,7 @@ def data_parser(row):
         if isinstance(item, datetime.datetime):
             try:
                 new_row.append(item.strftime('%Y-%m-%d'))
-            except Exception as e:
+            except Exception, e:
                 if isinstance(e, ValueError):
                     new_row.append('')
                 else:
@@ -646,7 +646,7 @@ def data_parser(row):
         elif isinstance(item, datetime.date):
             try:
                 new_row.append(item.strftime('%Y-%m-%d'))
-            except Exception as e:
+            except Exception, e:
                 if isinstance(e, ValueError):
                     new_row.append('')
                 else:
@@ -654,7 +654,7 @@ def data_parser(row):
 
         elif isinstance(item, decimal.Decimal):
             new_row.append(float(item))
-        elif isinstance(item, decimal.Decimal):
+        elif isinstance(item, cdecimal.Decimal):
             new_row.append(float(item))
         elif isinstance(item, int):
             new_row.append(item)
@@ -885,7 +885,7 @@ def getRecords(db, sql_s, request, has_limit=True):
             record = zip(columns, data_parser(row))
             data['records'].append( dict(record) )
         data['status'] = 'success'
-    except Exception as e:
+    except Exception, e:
         data['status'] = 'error'
         data['message'] = '%s\n\n%s' % (str(e), sql)
     return data
